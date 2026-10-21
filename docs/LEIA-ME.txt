@@ -1,0 +1,89 @@
+APURA 0.2.0 — loudness e master para entrega, como plugin
+=========================================================
+
+O QUE É
+O Apura acerta o volume da sua sequência para o destino: música, internet ou TV.
+Você escolhe para onde vai, aperta LISTEN, toca a sequência e ele ajusta o volume sozinho,
+com o pico protegido. Funciona no master do mixer ou no AudioSuite, no clip inteiro.
+Avid Media Composer e Pro Tools (AAX), Premiere e DaVinci Resolve (VST3), Logic (AU). Mac e Windows.
+Roda no computador, sem internet.
+
+
+COMO USAR
+Media Composer, no master (ao vivo):
+1. No Audio Mixer, ponha o Apura num insert do canal Master.
+2. Escolha o destino e aperte LISTEN.
+3. Toque a sequência inteira (ou um bom trecho) e aperte LISTEN de novo.
+4. Aparece ON TARGET. O mixdown e o export já saem no volume certo.
+
+Media Composer ou Pro Tools, no clip (AudioSuite):
+1. Selecione o trecho, abra o AudioSuite e escolha Apura. As faixas L e R vão juntas.
+2. Escolha o destino, dê Preview (a janela mostra a análise) e depois Render.
+   O clip novo ganha no nome o destino (TV23, WEB16…).
+
+Premiere, Resolve e Logic:
+Ponha o Apura no master (Mix no Premiere, Fairlight no Resolve, Stereo Out no Logic) e faça
+igual: destino, LISTEN, toca, aperta LISTEN de novo.
+
+OS DESTINOS
+- MUSIC:    −14 LUFS (plataformas de música)
+- INTERNET: −16 LUFS (YouTube, redes, sites)
+- TV:       −23 LUFS (EBU R128)
+No ⚙ ADVANCED dá para escolher qualquer alvo e o padrão americano ATSC (−24 LKFS).
+LUFS é a régua de volume que TV e internet usam: mede o quanto o som parece alto, não o pico.
+
+BOM SABER
+- Caráter: TRANSPARENT (só ganho e limitador), DENSE (mais denso, bom para celular)
+  e WARM (saturação leve).
+- EQ de 4 pontos: arraste os pontos direto no gráfico. MATCH põe os pontos onde a análise
+  sugere; FLAT zera.
+- A EQ muda um pouco o volume. Se mexer nela (ou usar o MATCH) depois do LISTEN, faça outro LISTEN.
+- Trocar de destino depois do LISTEN ajusta o volume sem precisar ouvir de novo.
+- A proteção de pico fica sempre ligada (teto de −1 dBTP).
+- BYPASS · SAME VOLUME toca o original no mesmo volume, para comparar de forma justa.
+
+
+QUAL ARQUIVO BAIXAR
+- Mac (chip Apple ou Intel, macOS 11 ou mais novo): Apura-0.2.0-mac.pkg
+  Instala AAX, VST3 e AU de uma vez.
+- Windows 10/11:                                    Apura-0.2.0-windows-vst3.zip
+  Só VST3 (Premiere, Resolve). O AAX de Windows ainda não existe.
+
+
+INSTALAR NO MAC
+1. Feche o Media Composer, o Pro Tools e os outros programas de edição.
+2. Abra o Apura-0.2.0-mac.pkg e siga o instalador. Ele pede a senha do Mac.
+3. Abra o programa de edição de novo. O Apura aparece na lista de plugins.
+
+O instalador não é assinado pela Apple, então o Mac reclama na primeira vez. É normal:
+
+> "O Apura-0.2.0-mac.pkg não pode ser aberto" / "A Apple não pôde verificar…"
+  1. Tente abrir o .pkg uma vez e clique em OK.
+  2. Vá em Ajustes do Sistema > Privacidade e Segurança.
+  3. No fim da página, clique em "Abrir Mesmo Assim" e confirme com a senha.
+
+> O Apura não aparece no Logic
+  Em Logic Pro > Configurações > Plug-in Manager, clique em "Reset & Rescan Selection".
+
+O AAX vai assinado pela PACE, como a Avid exige.
+
+
+INSTALAR NO WINDOWS
+1. Descompacte o Apura-0.2.0-windows-vst3.zip.
+2. Copie a pasta Apura.vst3 para C:\Program Files\Common Files\VST3\
+3. Abra o Premiere ou o Resolve de novo.
+
+> O navegador bloqueia o download
+  Nos downloads, clique nos três pontinhos ao lado do arquivo e escolha "Manter".
+
+
+BAIXANDO DO GOOGLE DRIVE
+"O Google Drive não pode verificar este arquivo quanto a vírus": é só pelo tamanho.
+Clique em "Fazer o download assim mesmo".
+
+
+SE DER PROBLEMA
+- Não chegou no alvo: toque um trecho maior durante o LISTEN, de preferência a sequência inteira.
+- O plugin não aparece no Avid: confira se o Media Composer estava fechado durante a
+  instalação e abra-o de novo.
+- Mande um print da tela e o nome do programa para o Danilo.
