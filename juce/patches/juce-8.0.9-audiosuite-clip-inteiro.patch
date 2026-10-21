@@ -1,0 +1,196 @@
+diff --git a/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.cpp b/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.cpp
+index 400b2a0..1d3a9f9 100644
+--- a/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.cpp
++++ b/modules/juce_audio_plugin_client/juce_audio_plugin_client_AAX.cpp
+@@ -89,6 +89,8 @@ static_assert (AAX_SDK_CURRENT_REVISION >= AAX_SDK_2p6p1_REVISION, "JUCE require
+ #include <AAX_Exception.h>
+ #include <AAX_Assert.h>
+ #include <AAX_TransportTypes.h>
++#include <AAX_CHostProcessor.h>
++#include <AAX_IString.h>
+ 
+ JUCE_END_IGNORE_WARNINGS_MSVC
+ JUCE_END_IGNORE_WARNINGS_GCC_LIKE
+@@ -2546,6 +2548,129 @@ namespace AAXClasses
+         check (desc.AddProcessProc_Native (algorithmProcessCallback, properties));
+     }
+ 
++    //==============================================================================
++    // AudioSuite de clip inteiro (remendo do Apura; ver AAXClientExtensions::usesWholeClipAudioSuite).
++    // O Avid entrega a selecao por acesso aleatorio; o plug-in processa tudo de uma vez
++    // e o resultado volta janela por janela.
++    class JuceAAX_HostProcessor final : public AAX_CHostProcessor
++    {
++    public:
++        static AAX_CHostProcessor* AAX_CALLBACK Create() { return new JuceAAX_HostProcessor(); }
++
++        AAX_Result PreRender (int32_t, int32_t, int32_t) override
++        {
++            pronto = false;
++            return AAX_SUCCESS;
++        }
++
++        AAX_Result PostRender() override
++        {
++            pronto = false;
++            resultado = AudioBuffer<float>();
++            return AAX_SUCCESS;
++        }
++
++        AAX_Result RenderAudio (const float* const inAudioIns[], int32_t inAudioInCount,
++                                float* const iAudioOuts[], int32_t iAudioOutCount, int32_t* ioWindowSize) override
++        {
++            if (ioWindowSize == nullptr)
++                return AAX_ERROR_NULL_ARGUMENT;
++
++            if (! pronto)
++            {
++                const auto r = processarSelecao (inAudioIns, inAudioInCount);
++
++                if (r != AAX_SUCCESS)
++                    return r;
++
++                pronto = true;
++            }
++
++            const auto inicio = GetLocation();
++            const auto janela = *ioWindowSize;
++            const auto total = (int64_t) resultado.getNumSamples();
++
++            for (int32_t c = 0; c < iAudioOutCount; ++c)
++            {
++                auto* out = iAudioOuts[c];
++
++                if (out == nullptr)
++                    continue;
++
++                std::fill (out, out + janela, 0.0f);
++
++                if (c < resultado.getNumChannels() && inicio >= 0 && inicio < total)
++                    std::copy_n (resultado.getReadPointer (c, (int) inicio), (size_t) jmin<int64_t> (janela, total - inicio), out);
++            }
++
++            return AAX_SUCCESS;
++        }
++
++        AAX_Result GetClipNameSuffix (int32_t inMaxLength, AAX_IString* outString) const override
++        {
++            if (auto* p = plugin(); p != nullptr && outString != nullptr)
++            {
++                const auto sufixo = p->getAAXClientExtensions().getWholeClipNameSuffix();
++
++                if (sufixo.isNotEmpty() && sufixo.length() <= inMaxLength)
++                {
++                    outString->Set (sufixo.toRawUTF8());
++                    return AAX_SUCCESS;
++                }
++            }
++
++            return AAX_CHostProcessor::GetClipNameSuffix (inMaxLength, outString);
++        }
++
++    private:
++        AudioProcessor* plugin() const
++        {
++            auto* parametros = dynamic_cast<const JuceAAX_Processor*> (GetEffectParameters());
++            return parametros != nullptr ? &parametros->getPluginInstance() : nullptr;
++        }
++
++        AAX_Result processarSelecao (const float* const inAudioIns[], int32_t inAudioInCount)
++        {
++            auto* p = plugin();
++            float taxa = 0.0f;
++
++            if (p == nullptr || Controller() == nullptr || Controller()->GetSampleRate (&taxa) != AAX_SUCCESS || taxa <= 0.0f)
++                return AAX_ERROR_NULL_OBJECT;
++
++            const auto n = GetInputRange();
++
++            if (n <= 0 || n > (int64_t) std::numeric_limits<int>::max())
++                return AAX_ERROR_INVALID_ARGUMENT;
++
++            resultado.setSize (inAudioInCount, (int) n);
++            resultado.clear();
++
++            for (int64_t pos = 0; pos < n;)
++            {
++                auto lidas = (int32_t) jmin<int64_t> (n - pos, 1 << 16);
++                const auto r = GetAudio (inAudioIns, inAudioInCount, pos, &lidas);
++
++                if (r != AAX_SUCCESS)
++                    return r;
++
++                if (lidas <= 0)
++                    break; // fim do material: o resto fica em silencio
++
++                for (int32_t c = 0; c < inAudioInCount; ++c)
++                    if (inAudioIns[c] != nullptr)
++                        resultado.copyFrom (c, (int) pos, inAudioIns[c], lidas);
++
++                pos += lidas;
++            }
++
++            return p->getAAXClientExtensions().processWholeClip (resultado, (double) taxa) ? AAX_SUCCESS
++                                                                                            : AAX_ERROR_PLUGIN_BEGIN - 1;
++        }
++
++        AudioBuffer<float> resultado;
++        bool pronto = false;
++    };
++
+     static void getPlugInDescription (AAX_IEffectDescriptor& descriptor, [[maybe_unused]] const AAX_IFeatureInfo* featureInfo)
+     {
+         auto plugin = createPluginFilterOfType (AudioProcessor::wrapperType_AAX);
+@@ -2576,6 +2701,21 @@ namespace AAXClasses
+         check (descriptor.AddProcPtr ((void*) JuceAAX_GUI::Create,        kAAX_ProcPtrID_Create_EffectGUI));
+         check (descriptor.AddProcPtr ((void*) JuceAAX_Processor::Create,  kAAX_ProcPtrID_Create_EffectParameters));
+ 
++        if (extensions.usesWholeClipAudioSuite())
++        {
++            // AudioSuite com a selecao inteira, todos os canais juntos (multi-input)
++            check (descriptor.AddProcPtr ((void*) JuceAAX_HostProcessor::Create, kAAX_ProcPtrID_Create_HostProcessor));
++
++            if (auto* propriedades = descriptor.NewPropertyMap())
++            {
++                propriedades->AddProperty (AAX_eProperty_UsesRandomAccess, true);
++                propriedades->AddProperty (AAX_eProperty_MultiInputModeOnly, true);
++                propriedades->AddProperty (AAX_eProperty_NumberOfInputs, AAX_eMaxAudioSuiteTracks);
++                propriedades->AddProperty (AAX_eProperty_NumberOfOutputs, AAX_eMaxAudioSuiteTracks);
++                check (descriptor.SetProperties (propriedades));
++            }
++        }
++
+         Array<int32> pluginIds;
+ 
+         if (plugin->isMidiEffect())
+diff --git a/modules/juce_audio_processors/utilities/juce_AAXClientExtensions.h b/modules/juce_audio_processors/utilities/juce_AAXClientExtensions.h
+index 7612af9..8d9d305 100644
+--- a/modules/juce_audio_processors/utilities/juce_AAXClientExtensions.h
++++ b/modules/juce_audio_processors/utilities/juce_AAXClientExtensions.h
+@@ -87,6 +87,26 @@ struct JUCE_API AAXClientExtensions
+         @see getPageFileName
+     */
+     virtual File getPageFileSearchPath() const { return {}; }
++
++    //==============================================================================
++    /*  AudioSuite de clip inteiro (remendo do Apura; nao faz parte do JUCE oficial).
++
++        Quando usesWholeClipAudioSuite() devolve true, o plug-in AAX ganha um Host
++        Processor: no AudioSuite, o Avid entrega a selecao inteira, com todos os canais
++        juntos, e processWholeClip() trata tudo de uma vez antes de devolver o resultado.
++        Isso permite medir o clip inteiro (loudness, por exemplo) antes de processar.
++    */
++    virtual bool usesWholeClipAudioSuite() const { return false; }
++
++    /** Recebe a selecao inteira e devolve o resultado no mesmo buffer. false = erro. */
++    virtual bool processWholeClip (AudioBuffer<float>& audio, double sampleRate)
++    {
++        ignoreUnused (audio, sampleRate);
++        return false;
++    }
++
++    /** Sufixo do nome do clip novo criado pelo AudioSuite (vazio = o padrao do Avid). */
++    virtual String getWholeClipNameSuffix() const { return {}; }
+ };
+ 
+ } // namespace juce

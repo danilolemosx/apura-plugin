@@ -1,0 +1,83 @@
+@font-face { font-family: "Archivo"; src: url("fonts/archivo.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+:root {
+  --papel: #efe5cf; --verm: #d2382f; --apagado: #a49c8c; --ok-claro: #8fd9a8; --ambar: #c9902e; --azul: #8fb3dc;
+  --fundo: #1d1c1b; --cinza: #3a3835; --painel: #2a2927; --borda: #383633; color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: linear-gradient(#262523, #1d1c1b); color: var(--papel);
+  font: 500 12px/1.35 "Archivo", -apple-system, "Segoe UI", sans-serif;
+  padding: 11px 14px 9px; display: flex; flex-direction: column; gap: 8px; position: relative;
+  -webkit-user-select: none; user-select: none; cursor: default;
+}
+button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+.espaco { flex: 1; }
+.oculto { display: none !important; }
+.tab { font-variant-numeric: tabular-nums; }
+.rot { font-size: 9.5px; font-weight: 800; letter-spacing: 1.5px; color: #8d8577; white-space: nowrap; }
+.rot-sobre { margin-bottom: 5px; }
+
+.topo { display: flex; align-items: center; gap: 9px; }
+.marca { font-size: 20px; font-weight: 900; font-stretch: 125%; letter-spacing: .5px; line-height: 1; }
+.marca span { color: var(--verm); }
+.selo { font-size: 9px; font-weight: 800; letter-spacing: 1.3px; border: 1.5px solid #6b665e; color: #cfc6b4; padding: 3px 6px; border-radius: 3px; }
+.selo.azul { border-color: var(--azul); color: var(--azul); }
+.selo.ok { border-color: var(--ok-claro); color: var(--ok-claro); }
+.selo.aviso { border-color: var(--ambar); color: var(--ambar); }
+.selo.erro { border-color: var(--verm); color: var(--verm); }
+
+.destinos { display: flex; gap: 6px; }
+.destino { flex: 1; background: #34322f; border: 1px solid #47443f; border-radius: 6px; padding: 7px 10px; text-align: left; }
+.destino:hover { border-color: #6b665e; }
+.destino b { display: block; font-size: 13.5px; font-weight: 900; font-stretch: 115%; letter-spacing: .6px; }
+.destino span { font-size: 9.5px; color: #8d8577; font-weight: 700; letter-spacing: .3px; }
+.destino.ligado { border-color: var(--verm); background: #382826; }
+.destino.ligado b::after { content: " ●"; color: var(--verm); font-size: 9px; vertical-align: 2px; }
+
+.grupo { display: flex; gap: 4px; }
+.tecla { font-size: 10px; font-weight: 800; letter-spacing: 1.2px; color: #cfc6b4; background: #34322f; border: 1px solid #47443f; border-radius: 4px; padding: 6px 9px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.tecla:hover { border-color: #6b665e; }
+.tecla.ligada { color: var(--papel); border-color: var(--verm); }
+.tecla.ligada::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--verm); box-shadow: 0 0 6px var(--verm); }
+.tecla.grande { padding: 9px; font-size: 11px; }
+.tecla.escutando { color: var(--ambar); border-color: var(--ambar); }
+
+.grade { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 9px; }
+.painel { background: var(--painel); border: 1px solid var(--borda); border-radius: 8px; padding: 9px 10px; display: flex; flex-direction: column; gap: 7px; min-height: 0; }
+.tit { display: flex; align-items: center; gap: 8px; }
+.tit h3 { font-size: 10px; font-weight: 800; letter-spacing: 1.6px; color: var(--papel); }
+.tit::after { content: ""; flex: 1; height: 1px; background: #3f3c38; order: 1; }
+.tit > :not(h3) { order: 2; }
+
+.grafico { position: relative; flex: 1; min-height: 120px; background: #222120; border-radius: 5px; overflow: hidden; }
+.grafico svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.vazio { position: absolute; left: 0; right: 0; bottom: 30%; display: flex; justify-content: center; color: #7d766a; font-size: 11px; letter-spacing: .3px; pointer-events: none; }
+.linha { display: flex; align-items: center; gap: 6px; }
+.aviso { font-size: 10.5px; color: var(--ambar); }
+
+.volume { gap: 8px; }
+.palavra { font-size: 20px; font-weight: 900; font-stretch: 115%; letter-spacing: .6px; text-align: center; color: #7d766a; }
+.palavra.ok { color: var(--ok-claro); } .palavra.baixo { color: var(--ambar); } .palavra.alto { color: var(--verm); }
+#medidor { width: 100%; height: auto; }
+.info { font-size: 10.5px; color: #9b9384; text-align: center; line-height: 1.4; min-height: 30px; }
+.protecao { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #3f3c38; padding-top: 6px; margin-top: auto; }
+.protecao b { font-size: 10.5px; color: var(--ok-claro); font-weight: 800; letter-spacing: .5px; }
+.protecao b.trabalhando { color: var(--ambar); }
+
+.pe { display: flex; gap: 6px; align-items: center; }
+.rodape { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; color: #7d766a; font-weight: 600; }
+#status.aviso { color: var(--ambar); }
+
+/* ajustes avançados, por cima da janela */
+.avancado { position: absolute; left: 0; right: 0; top: 46px; bottom: 0; padding: 4px 14px 12px; background: linear-gradient(#232220, #1d1c1b); display: flex; flex-direction: column; gap: 12px; }
+.knobs { display: flex; justify-content: space-around; align-items: flex-start; }
+.knob { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.knob svg { display: block; cursor: ns-resize; touch-action: none; }
+.knob .v { font-size: 13px; font-weight: 800; color: var(--papel); }
+.knob .n { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; color: var(--apagado); }
+.numeros { display: grid; grid-template-columns: repeat(3, auto 1fr); gap: 4px 10px; background: var(--painel); border: 1px solid var(--borda); border-radius: 8px; padding: 9px 10px; }
+.numeros dt { font-size: 9.5px; font-weight: 800; letter-spacing: 1.4px; color: #8d8577; white-space: nowrap; }
+.numeros dd { font-size: 11.5px; font-weight: 800; }
+.explica { font-size: 10.5px; color: #8d8577; line-height: 1.45; }
+.explica b { color: #cfc6b4; font-weight: 800; letter-spacing: .5px; }

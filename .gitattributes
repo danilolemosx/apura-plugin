@@ -1,0 +1,4 @@
+# o remendo do JUCE tem linhas com CRLF (como os arquivos do JUCE): nunca converter
+juce/patches/*.patch -text
+*.woff2 binary
+*.wav binary

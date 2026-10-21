@@ -1,0 +1,10 @@
+# casos de referência (gerados por referencia/gerar_referencias.py, ~250 MB)
+motor/tests/ref/
+motor/target/
+build/
+dist/
+__pycache__/
+.DS_Store
+build-cfg.log
+build*.log
+scripts/assinatura.local

@@ -1,0 +1,28 @@
+[package]
+name = "apura-motor"
+description = "Motor do Apura: análise e master de clip inteiro (loudness, EQ, dinâmica, true peak)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[lib]
+name = "apura_motor"
+# staticlib: ligada ao plugin C++; rlib: usada pelos testes
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+realfft = "3.5"
+
+[dev-dependencies]
+hound = "3.5"
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+# "unwind" (não "abort"): um pânico vira código de erro na interface em C, sem derrubar o Avid
+panic = "unwind"
+
+# os testes passam minutos de áudio pelo motor
+[profile.test]
+opt-level = 3

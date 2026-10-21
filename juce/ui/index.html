@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Apura</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="marca">APURA<span>.</span></div>
+    <span id="selo" class="selo">REAL TIME</span>
+    <span class="espaco"></span>
+    <button id="abrirAvancado" class="tecla">⚙ ADVANCED</button>
+  </header>
+
+  <section>
+    <div class="rot rot-sobre">WHERE IS IT GOING?</div>
+    <div id="destinos" class="destinos">
+      <button class="destino" data-i="0"><b>MUSIC</b><span>Spotify · Apple Music</span></button>
+      <button class="destino" data-i="1"><b>INTERNET</b><span>YouTube · Instagram · Vimeo</span></button>
+      <button class="destino" data-i="2"><b>TV</b><span>Broadcast · EBU R128</span></button>
+    </div>
+  </section>
+
+  <main class="grade">
+    <section class="painel">
+      <div class="tit"><h3>EQ</h3><span class="rot" id="infoEq">DRAG THE POINTS</span></div>
+      <div class="grafico">
+        <svg id="espectro" role="img" aria-label="Spectrum with draggable EQ points"></svg>
+        <div id="vazio" class="vazio"></div>
+      </div>
+      <div class="linha">
+        <button id="match" class="tecla">✦ MATCH</button>
+        <button id="flat" class="tecla">FLAT</button>
+        <span class="espaco"></span>
+        <span id="avisoEq" class="aviso"></span>
+      </div>
+    </section>
+
+    <section class="painel volume">
+      <div class="tit"><h3>VOLUME</h3></div>
+      <div id="palavra" class="palavra">—</div>
+      <svg id="medidor" viewBox="0 0 220 60" role="img" aria-label="Volume against the target"></svg>
+      <button id="listen" class="tecla grande">● LISTEN</button>
+      <div id="infoVolume" class="info"></div>
+      <div class="protecao"><span class="rot">PEAK PROTECTION</span><b id="protecao">ON</b></div>
+    </section>
+  </main>
+
+  <footer class="pe">
+    <span class="rot">CHARACTER</span>
+    <div class="grupo" id="carater">
+      <button class="tecla" data-i="0">TRANSPARENT</button>
+      <button class="tecla" data-i="1">DENSE</button>
+      <button class="tecla" data-i="2">WARM</button>
+    </div>
+    <span class="espaco"></span>
+    <button id="compare" class="tecla">BYPASS · SAME VOLUME</button>
+  </footer>
+  <div class="rodape"><span id="status"></span><span id="padrao"></span></div>
+
+  <div id="avancado" class="avancado oculto">
+    <div class="tit"><h3>ADVANCED</h3><button id="fecharAvancado" class="tecla">✕ CLOSE</button></div>
+    <div class="knobs">
+      <div class="knob" data-param="target" data-tam="70" data-cor="#efe5cf"><svg></svg><span class="v tab"></span><span class="n">TARGET</span></div>
+      <div class="knob" data-param="ceiling" data-tam="70" data-cor="#d2382f"><svg></svg><span class="v tab"></span><span class="n">CEILING</span></div>
+      <div class="knob" data-param="gain" data-tam="70" data-cor="#8fd9a8" data-bipolar="1"><svg></svg><span class="v tab"></span><span class="n">GAIN</span></div>
+      <div class="knob" data-param="highPass" data-tam="70" data-cor="#efe5cf"><svg></svg><span class="v tab"></span><span class="n">HIGH-PASS</span></div>
+      <div class="knob" data-param="width" data-tam="70" data-cor="#c9902e" data-bipolar="1"><svg></svg><span class="v tab"></span><span class="n">WIDTH</span></div>
+    </div>
+    <div class="linha"><button id="atsc" class="tecla">ATSC · −24 LKFS · −2 dBTP</button><span class="espaco"></span><span class="rot" id="latencia"></span></div>
+    <dl id="numeros" class="numeros"></dl>
+    <p class="explica">
+      <b>TARGET</b> is the loudness the destination asks for. LUFS measures how loud it sounds, not the peak.
+      <b>CEILING</b> is the highest true peak allowed. <b>GAIN</b> is set by Listen and follows the destination; you can trim it.
+      <b>HIGH-PASS</b> removes rumble below the frequency. <b>WIDTH</b> opens (+) or narrows (−) the stereo.
+    </p>
+  </div>
+
+  <script>
+    // relata erros e o carregamento ao plugin (conferência dos testes, APURA_TESTE_JANELA)
+    window.__apuraErros = [];
+    window.addEventListener("error", (e) => window.__apuraErros.push(String(e.message) + " @" + e.lineno));
+    window.addEventListener("unhandledrejection", (e) => window.__apuraErros.push("promessa: " + String(e.reason)));
+    setTimeout(() => {
+      if (!window.__JUCE__) return;
+      const resumo = { erros: window.__apuraErros, ...(window.__apuraResumo ? window.__apuraResumo() : { semApp: true }) };
+      window.__JUCE__.backend.emitEvent("__juce__invoke", { name: "janelaPronta", params: [JSON.stringify(resumo)], resultId: 1 });
+    }, 2500);
+  </script>
+  <script src="juce.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

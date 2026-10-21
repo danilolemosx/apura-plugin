@@ -1,0 +1,131 @@
+name: Plugin
+
+# Compila o Apura (AAX sem assinatura, VST3 e AU) para Mac (Apple + Intel) e Windows, e testa:
+# os testes do motor, o loudness nos dois modos (clip inteiro e ao vivo com LISTEN) e o pluginval.
+# A assinatura PACE do AAX é feita depois, fora daqui (scripts/empacotar-mac.sh).
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  PLUGINVAL_VERSAO: "v1.0.4"
+
+jobs:
+  mac:
+    name: macOS (Apple + Intel)
+    runs-on: macos-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/motor/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: motor
+      - name: JUCE 8.0.9 com o remendo do AudioSuite de clip inteiro
+        run: scripts/preparar-juce.sh "$RUNNER_TEMP/JUCE"
+      - name: Testes do motor
+        working-directory: motor
+        run: cargo test --release
+      - name: Configurar
+        run: >
+          cmake -B build -S juce -DCMAKE_BUILD_TYPE=Release -DAPURA_UNIVERSAL=ON
+          -DJUCE_DIR="$RUNNER_TEMP/JUCE" -DMOTOR_TARGET_DIR="$CARGO_TARGET_DIR"
+      - name: Compilar
+        run: cmake --build build --target Apura_VST3 Apura_AU Apura_AAX testa-apura -j 4
+      - name: Conferir arquiteturas (Apple + Intel)
+        run: |
+          for f in VST3/Apura.vst3/Contents/MacOS/Apura AU/Apura.component/Contents/MacOS/Apura AAX/Apura.aaxplugin/Contents/MacOS/Apura; do
+            lipo -info "build/Apura_artefacts/Release/$f"
+            lipo -info "build/Apura_artefacts/Release/$f" | grep -q "x86_64 arm64\|arm64 x86_64"
+          done
+      - name: Loudness nos dois modos
+        run: |
+          T=build/testa-apura_artefacts/Release/testa-apura
+          python3 scripts/gerar-audio-teste.py "$RUNNER_TEMP/teste.wav"
+          $T "$RUNNER_TEMP/teste.wav" "$RUNNER_TEMP/clip.wav" destination=2 character=0 | tee clip.txt
+          awk '/^LUFS/ { d = $4 + 23; if (d < 0) d = -d; exit !(d < 0.1) }' clip.txt
+          $T --ao-vivo "$RUNNER_TEMP/teste.wav" "$RUNNER_TEMP/vivo.wav" destination=1 character=1 target=-16 | tee vivo.txt
+          awk '/segunda passada/ { d = $3 + 16; if (d < 0) d = -d; exit !(d < 0.15 && $7 <= -0.95) }' vivo.txt
+      - name: Instalar no usuário (para o pluginval e o auval)
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/VST3 ~/Library/Audio/Plug-Ins/Components
+          ditto build/Apura_artefacts/Release/VST3/Apura.vst3 ~/Library/Audio/Plug-Ins/VST3/Apura.vst3
+          ditto build/Apura_artefacts/Release/AU/Apura.component ~/Library/Audio/Plug-Ins/Components/Apura.component
+          killall -9 AudioComponentRegistrar || true
+      - name: pluginval e auval
+        run: |
+          curl -sL -o pv.zip "https://github.com/Tracktion/pluginval/releases/download/$PLUGINVAL_VERSAO/pluginval_macOS.zip"
+          unzip -q pv.zip
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 7 --validate-in-process --skip-gui-tests --timeout-ms 600000 --validate ~/Library/Audio/Plug-Ins/VST3/Apura.vst3
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 7 --validate-in-process --skip-gui-tests --timeout-ms 600000 --validate ~/Library/Audio/Plug-Ins/Components/Apura.component
+          auval -v aufx Apur DnLm | tail -3
+      - name: Empacotar
+        run: |
+          mkdir -p pacote
+          ditto build/Apura_artefacts/Release/VST3/Apura.vst3 pacote/Apura.vst3
+          ditto build/Apura_artefacts/Release/AU/Apura.component pacote/Apura.component
+          ditto build/Apura_artefacts/Release/AAX/Apura.aaxplugin "pacote/Apura.aaxplugin (sem assinatura)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Apura-mac
+          path: pacote
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}\motor\target
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: motor
+      - name: JUCE 8.0.9 com o remendo do AudioSuite de clip inteiro
+        run: scripts/preparar-juce.sh "$RUNNER_TEMP/JUCE"
+      - name: WebView2 (janela em HTML)
+        shell: pwsh
+        run: |
+          Register-PackageSource -ProviderName NuGet -Name nugetRepository -Location https://www.nuget.org/api/v2 -Force | Out-Null
+          Install-Package Microsoft.Web.WebView2 -Scope CurrentUser -RequiredVersion 1.0.1901.177 -Source nugetRepository -Force | Out-Null
+      - name: Testes do motor
+        working-directory: motor
+        run: cargo test --release
+      - name: Configurar
+        run: >
+          cmake -B build -S juce -A x64
+          -DJUCE_DIR="$RUNNER_TEMP/JUCE" -DMOTOR_TARGET_DIR="$CARGO_TARGET_DIR"
+      - name: Compilar
+        run: cmake --build build --config Release --target Apura_VST3 Apura_AAX testa-apura -- -m
+      - name: Loudness nos dois modos
+        run: |
+          T=build/testa-apura_artefacts/Release/testa-apura.exe
+          python scripts/gerar-audio-teste.py "$RUNNER_TEMP/teste.wav"
+          $T "$RUNNER_TEMP/teste.wav" "$RUNNER_TEMP/clip.wav" destination=2 character=0 | tee clip.txt
+          awk '/^LUFS/ { d = $4 + 23; if (d < 0) d = -d; exit !(d < 0.1) }' clip.txt
+          $T --ao-vivo "$RUNNER_TEMP/teste.wav" "$RUNNER_TEMP/vivo.wav" destination=1 character=1 target=-16 | tee vivo.txt
+          awk '/segunda passada/ { d = $3 + 16; if (d < 0) d = -d; exit !(d < 0.15 && $7 <= -0.95) }' vivo.txt
+      - name: pluginval
+        run: |
+          curl -sL -o pv.zip "https://github.com/Tracktion/pluginval/releases/download/$PLUGINVAL_VERSAO/pluginval_Windows.zip"
+          unzip -q pv.zip
+          ./pluginval.exe --strictness-level 7 --validate-in-process --skip-gui-tests --timeout-ms 600000 --validate build/Apura_artefacts/Release/VST3/Apura.vst3
+      - name: Empacotar
+        run: |
+          mkdir -p pacote
+          cp -R build/Apura_artefacts/Release/VST3/Apura.vst3 pacote/
+          cp -R build/Apura_artefacts/Release/AAX/Apura.aaxplugin "pacote/Apura.aaxplugin (sem assinatura)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Apura-windows
+          path: pacote
